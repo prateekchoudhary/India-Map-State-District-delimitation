@@ -1,0 +1,157 @@
+<style type="text/css">
+#map_canvas {height: 750px;width:850px;}
+</style>
+<script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?v=3&sensor=false&language=en"></script>
+    <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="js/markerwithlabel.js"></script>
+    <link rel="stylesheet" href="style/style.css">
+
+<script type="text/javascript">
+google.load('visualization', '1');
+var layer_state_level;
+var geocoder;
+var infoWindow = new google.maps.InfoWindow();
+var dataTable = null;
+var zoomChanged = false;
+var zoomLevel = 0;
+var events = {'bounds_changed': 'fired when the viewport bounds have changed.'};
+var init;
+function initialize() {
+  init = new google.maps.LatLng(22.963747403526856, 81.0853846875);
+  geocoder = new google.maps.Geocoder();
+  var map = new google.maps.Map(document.getElementById('map_canvas'), {
+    	         center: init,
+    		 zoom: 5,
+         	 mapTypeId: google.maps.MapTypeId.TERRAIN,
+  });
+  layer_state_level = new google.maps.FusionTablesLayer({
+     		           query: {
+     			           select: "'geometry'",
+     			           from: '12FB48Z5h7N5aLFjRwxYNCRYHtT-sXEdS8rtr0Wln'
+     		            },
+	  		    map: map,
+	  		    suppressInfoWindows: true,
+			    styles: [{
+				  polygonOptions: {
+					strokeColor: '#000000',
+			                fillColor: "#D8D8D8",
+				        fillOpacity: 0.2
+				  }
+			    }]
+    });
+    layer_district_level = new google.maps.FusionTablesLayer({
+				query: {
+					select: "'Geometry'",
+					from: '1f0FUWRB3tkAf2aLCvyu4csVhk_Wb6idsClaR20qk'
+				},
+				map: map,
+				suppressInfoWindows: true,
+				styles: [{
+				polygonOptions: {
+				  fillColor: "#D8D8D8",
+				  fillOpacity: 0.2
+				}
+				}]
+    });
+    layer_state_level.setMap(map);
+    google.maps.event.addListener(map, 'zoom_changed', function() {
+		zoomLevel = map.getZoom();
+		if(zoomLevel>5){
+			layer_state_level.setMap(null);
+			layer_district_level.setMap(map);
+		}
+                else if ( zoomLevel < 5 ) { 
+        	        map.setZoom(5); 
+			layer_district_level.setMap(null);
+			layer_state_level.setMap(map);
+                } 
+		else{
+			layer_district_level.setMap(null);
+			layer_state_level.setMap(map);
+		}
+    });
+    google.maps.event.addListener(layer_state_level, 'click', function(event) {
+		var lat = event.latLng.lat();
+                var lng = event.latLng.lng();
+		var coordinate = new google.maps.LatLng(lat, lng);
+		var StateName = event.row['State'].value;
+		infoWindow.setContent('<h3>' + StateName + '</h3>');
+		infoWindow.setPosition(coordinate);
+		infoWindow.open(map);
+		map.setCenter(coordinate);
+		map.setZoom(7);
+    });
+    google.maps.event.addListener(layer_district_level,'click',function(event){
+	var lat = event.latLng.lat();
+        var lng = event.latLng.lng();
+	var coordinate = new google.maps.LatLng(lat, lng);
+	var StateName = event.row['StateName'].value;
+	var DistrictName = event.row['DistrictName'].value;
+	var queryList = [];var newList = [];
+        var consultation = 'Consultation(s) :<br>';
+        queryList.push("SELECT ConsultationVenue, ConsultationDate, ConsultationTime FROM ");
+       	queryList.push("1oeE2O7i0KF_zlG8J70dvwEiAHawHhiNWVnC5DNg where 'StateName' IN ('"+StateName+"')");
+	var query = encodeURIComponent(queryList.join(''));
+        var gvizQuery = new google.visualization.Query('http://www.google.com/fusiontables/gvizdata?tq=' + query);
+        infoWindow.setContent('<div style="padding:10px;"><img src="images/loader.gif">Loading content...</div>'
+                              );
+        infoWindow.setPosition(coordinate);
+	    infoWindow.open(map);
+        gvizQuery.send(function(response) {
+		 var datatable = response.getDataTable();
+		 if (datatable && datatable.getNumberOfRows()) { 
+                   consultation += '<table cellpadding="2">';
+                   consultation += '<th>Venue</th><th>Date</th><th>Time</th>';       
+		   for(i=0;i<datatable.getNumberOfRows();i++){
+                     venue = datatable.getValue(i, 0);
+                     date = datatable.getValue(i, 1);
+                     vtime = datatable.getValue(i, 2);
+                     consultation += '<tr><td>'+venue+'</td><td>'+date+'</td><td>'+vtime+'</td></tr>';
+	            }
+                    consultation += '</table><br>';
+		 }
+                 else{
+                     consultation += 'No consultations available';
+                 }
+                 var Population = event.row['Population'].value;
+	         var Literacy = event.row['Literacy'].value;
+	         var Religions = event.row['Religions'].value;
+	         var towns = event.row['Towns'].value;
+	         //var pconvener = event.row['PrimaryConvener'].value;
+                 var prow = true;
+                 if(pconvener == '')
+                    var prow = false;
+	         var pphotoUrl = event.row['PrimaryConvenerPhoto'].value;
+                 var pcontact = event.row['PrimaryConvenerContact'].value;
+                 var sconvener = event.row['SecConvener'].value;
+                 newrow = true;
+                 if(sconvener == '')
+                    var newrow = false;
+	         var sphotoUrl = event.row['SecConvenerPhoto'].value;
+                 var scontact = event.row['SecConvenerContact'].value;
+                 var tabContent = 'No conveners assigned';
+                 if(prow){
+                   tabContent = '<table cellpadding="2"><th>Name</th><th>Photo</th><th>Contact</th>';
+                   tabContent += '<tr><td>'+pconvener+'</td><td><img src="'+pphotoUrl+'" width="100"></td><td>'+pcontact+'</td></tr>';
+                   if(newrow)
+                      tabContent += '<tr><td>'+sconvener+'</td><td><img src="'+sphotoUrl+'" width="100"></td><td>'+scontact+'</td></tr>';
+                   tabContent += '</table>';
+                 }
+	         infoWindow.setContent('<h3>' + StateName + '</h3>' +
+	                      '<div>District : ' + DistrictName +'</div>'+
+		  	      '<div>Convener(s):</div>'+
+                              tabContent+
+                              '<div>'+consultation+'</div>'
+                              );
+                 infoWindow.setPosition(coordinate);
+	         infoWindow.open(map);
+        });
+	
+    });
+}
+google.maps.event.addDomListener(window, 'load', initialize);
+</script>
+
+<div id="map_canvas"></div>
