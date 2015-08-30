@@ -92,32 +92,10 @@ function initialize() {
 	var coordinate = new google.maps.LatLng(lat, lng);
 	var StateName = event.row['StateName'].value;
 	var DistrictName = event.row['DistrictName'].value;
-	var queryList = [];var newList = [];
-        var consultation = 'Consultation(s) :<br>';
-        queryList.push("SELECT ConsultationVenue, ConsultationDate, ConsultationTime FROM ");
-       	queryList.push("1oeE2O7i0KF_zlG8J70dvwEiAHawHhiNWVnC5DNg where 'StateName' IN ('"+StateName+"')");
-	var query = encodeURIComponent(queryList.join(''));
-        var gvizQuery = new google.visualization.Query('http://www.google.com/fusiontables/gvizdata?tq=' + query);
         infoWindow.setContent('<div style="padding:10px;"><img src="images/loader.gif">Loading content...</div>'
                               );
         infoWindow.setPosition(coordinate);
 	    infoWindow.open(map);
-        gvizQuery.send(function(response) {
-		 var datatable = response.getDataTable();
-		 if (datatable && datatable.getNumberOfRows()) { 
-                   consultation += '<table cellpadding="2">';
-                   consultation += '<th>Venue</th><th>Date</th><th>Time</th>';       
-		   for(i=0;i<datatable.getNumberOfRows();i++){
-                     venue = datatable.getValue(i, 0);
-                     date = datatable.getValue(i, 1);
-                     vtime = datatable.getValue(i, 2);
-                     consultation += '<tr><td>'+venue+'</td><td>'+date+'</td><td>'+vtime+'</td></tr>';
-	            }
-                    consultation += '</table><br>';
-		 }
-                 else{
-                     consultation += 'No consultations available';
-                 }
                  var Population = event.row['Population'].value;
 	         var Literacy = event.row['Literacy'].value;
 	         var Religions = event.row['Religions'].value;
@@ -133,8 +111,6 @@ function initialize() {
                               );
                  infoWindow.setPosition(coordinate);
 	         infoWindow.open(map);
-        });
-	
     });
 }
 google.maps.event.addDomListener(window, 'load', initialize);
